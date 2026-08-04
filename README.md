@@ -28,9 +28,12 @@ dotnet run --project src/Solve
   so the two always match. All values rounded to 3 decimals.
 - `Program.cs` — main menu, algorithm submenu, sensitivity submenu (stubbed — see below).
 
-Verified against two hand-checkable LPs (not in the brief, just sanity checks):
-`samples/wyndor.txt` -> `x1=2, x2=6, z=36` (Hillier & Lieberman's Wyndor Glass Co.),
-plus `samples/unbounded.txt` and `samples/infeasible.txt` for the error-handling paths.
+Verified against the group's own reference case, `samples/santas_workshop.txt`
+(full derivation in `docs/Santas_Workshop_Reference.md`): our Primal Simplex reaches
+`x1=20, x2=60, z=180` in the same 3 pivots and the same entering/leaving sequence
+(x1↔s3, x2↔s1, s3↔s2) as the reference tableaus. `samples/wyndor.txt` (Hillier &
+Lieberman's Wyndor Glass Co., `x1=2, x2=6, z=36`) is kept as a second known-answer
+check, plus `samples/unbounded.txt` and `samples/infeasible.txt` for the error paths.
 
 ### Known gap Member 2/3 need to handle
 
@@ -41,6 +44,15 @@ it directly gives the *unbounded-above* relaxation (variables can exceed 1), not
 building the B&B Simplex / B&B Knapsack root relaxation, add `xi <= 1` bounds for
 every `bin` variable (and use `LPModel.WithExtraConstraint(...)` for branching bounds)
 before calling `PrimalSimplex.Solve`.
+
+## Reference material
+
+`docs/Santas_Workshop_Reference.md` has the full hand-worked derivation for the LP
+above: every Primal Simplex and Revised Primal Simplex tableau, B⁻¹ at each step,
+shadow prices, duality (primal/dual, strong duality check), and every sensitivity
+range (objective coefficients, RHS values). Member 2 can check Revised Simplex
+against it pivot-by-pivot; Member 4 can check every SA operation's expected output
+before building the UI around it.
 
 ## Still to build (see project plan)
 
@@ -72,6 +84,8 @@ Sample files are in `samples/`.
 ## Folder structure
 
 ```
+docs/Santas_Workshop_Reference.md   full worked LP + SA + duality reference
+samples/                            sample input files
 src/Solve/
 ├── Program.cs
 ├── Models/                 LPModel, Tableau, IterationRecord, SimplexResult, BranchNode
