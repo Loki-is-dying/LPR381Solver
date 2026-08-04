@@ -61,7 +61,7 @@ class Program
     private static void LoadInputFile()
     {
         Console.Write("Path to input file: ");
-        string? path = Console.ReadLine();
+        string? path = Console.ReadLine()?.Trim().Trim('"');
         if (string.IsNullOrWhiteSpace(path))
         {
             Console.WriteLine("No path entered.");
