@@ -1,7 +1,7 @@
 # LPR381 Solver
 
-Menu-driven console app that solves Linear/Integer Programming models and (once
-Member 4's part lands) runs sensitivity analysis on them. Builds to `solve.exe`.
+Menu-driven console app that solves Linear/Integer Programming models and runs
+sensitivity analysis on them. Builds to `solve.exe`.
 
 ## Build & run
 
@@ -13,7 +13,7 @@ dotnet build
 dotnet run --project src/Solve
 ```
 
-## Status: Member 1's scope (done)
+## What's implemented so far
 
 - `Models/` — `LPModel`, `Tableau`, `IterationRecord`, `SimplexResult`, `BranchNode`
   (shared contract — code against these, don't change shapes without telling the group).
@@ -35,7 +35,7 @@ Verified against the group's own reference case, `samples/santas_workshop.txt`
 Lieberman's Wyndor Glass Co., `x1=2, x2=6, z=36`) is kept as a second known-answer
 check, plus `samples/unbounded.txt` and `samples/infeasible.txt` for the error paths.
 
-### Known gap Member 2/3 need to handle
+### Known gap for whoever builds Branch & Bound
 
 `PrimalSimplex` is a plain LP solver — it does **not** turn a `bin`/`int` sign
 restriction into an upper-bound constraint. Solving `samples/knapsack.txt` through
@@ -50,17 +50,22 @@ before calling `PrimalSimplex.Solve`.
 `docs/Santas_Workshop_Reference.md` has the full hand-worked derivation for the LP
 above: every Primal Simplex and Revised Primal Simplex tableau, B⁻¹ at each step,
 shadow prices, duality (primal/dual, strong duality check), and every sensitivity
-range (objective coefficients, RHS values). Member 2 can check Revised Simplex
-against it pivot-by-pivot; Member 4 can check every SA operation's expected output
-before building the UI around it.
+range (objective coefficients, RHS values). Useful for checking Revised Simplex
+pivot-by-pivot, and for checking every SA operation's expected output before
+building the UI around it.
 
 ## Still to build (see project plan)
 
-| Owner | Piece |
-|---|---|
-| Member 2 | Revised Primal Simplex, Branch & Bound Simplex |
-| Member 3 | Branch & Bound Knapsack, Cutting Plane |
-| Member 4 | All Sensitivity Analysis operations, Duality |
+- Revised Primal Simplex — canonical form + Product Form / Price Out iterations.
+- Branch & Bound Simplex — LP relaxation, branching, fathoming, backtracking, best
+  candidate.
+- Branch & Bound Knapsack — profit/weight ordering, fractional-knapsack bound,
+  greedy-first traversal, backtracking.
+- Cutting Plane (Gomory) — Revised Simplex relaxation, cut generation, re-solve loop,
+  iteration cap.
+- Sensitivity Analysis — all 12 operations from the brief (NBV/BV ranges and changes,
+  RHS ranges and changes, NBV column ranges and changes, add activity, add constraint,
+  shadow prices) plus duality (apply, solve dual, verify strong/weak).
 
 The algorithm submenu and SA submenu in `Program.cs` already have numbered stubs
 for every one of these — wire your implementation in where it says "not yet
@@ -92,6 +97,6 @@ src/Solve/
 ├── Parsing/                InputFileParser, InputFormatException
 ├── Algorithms/             CanonicalFormBuilder, PrimalSimplex  (+ your algorithm files)
 ├── Output/                 ResultReporter
-├── SensitivityAnalysis/    (empty — Member 4)
+├── SensitivityAnalysis/    (empty — not yet built)
 └── Utils/                  Rounding
 ```
