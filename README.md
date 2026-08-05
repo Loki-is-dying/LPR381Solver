@@ -100,3 +100,11 @@ src/Solve/
 ├── SensitivityAnalysis/    (empty — not yet built)
 └── Utils/                  Rounding
 ```
+
+
+
+### Members
+- Luqmaan Slarmie - Project Manager and Architecture design
+- Ofentse Mathosa - Revised Simplex and B&B Simplex
+- Rubina Moyakhe - Knapsack and Cutting Plane
+- Stephen van de Merwe - Sensitivity Analysis
