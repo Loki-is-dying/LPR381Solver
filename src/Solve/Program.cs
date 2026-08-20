@@ -106,7 +106,8 @@ class Program
         switch (choice?.Trim())
         {
             case "1": RunPrimalSimplex(); break;
-            case "2":
+            case "2": RunRevisedSimplex(); break;
+            case "3": RunBranchAndBound(); break;
             case "3":
             case "4":
             case "5":
@@ -147,6 +148,120 @@ class Program
             Console.WriteLine($"Model could not be solved: {ex.Message}");
         }
     }
+    private static void RunRevisedSimplex()
+{
+    try
+    {
+        var result = RevisedPrimalSimplex.Solve(_model!);
+
+        Console.WriteLine();
+        ResultReporter.WriteSimplexResult(Console.Out, "Revised Primal Simplex", _model!, result);
+
+        Console.Write("Output file path (blank to skip): ");
+        string? outPath = Console.ReadLine();
+        if (!string.IsNullOrWhiteSpace(outPath))
+        {
+            ResultReporter.WriteSimplexResultToFile(outPath, "Revised Primal Simplex", _model!, result);
+            Console.WriteLine($"Written to {outPath}");
+        }
+    }
+    catch (IOException ex)
+    {
+        Console.WriteLine($"Could not write output file: {ex.Message}");
+    }
+    catch (ArgumentException ex)
+    {
+        Console.WriteLine($"Model could not be solved: {ex.Message}");
+    }
+    catch (InvalidOperationException ex)
+    {
+        Console.WriteLine($"Model could not be solved: {ex.Message}");
+    }
+}
+
+private static void RunBranchAndBound()
+{
+    try
+    {
+        var result = BranchAndBoundSimplex.Solve(_model!);
+
+        Console.WriteLine();
+        Console.WriteLine($"Branch & Bound Simplex - status: {result.Status}");
+        if (!string.IsNullOrEmpty(result.Message))
+            Console.WriteLine(result.Message);
+        Console.WriteLine();
+
+        foreach (var node in result.AllNodes)
+        {
+            string description = result.BranchDescriptions.TryGetValue(node.Id, out var d) ? d : "";
+            Console.WriteLine($"Node {node.Id} (parent {node.ParentId}) - {description}");
+            Console.WriteLine($"  Bound = {Rounding.R(node.Bound)}");
+            if (node.Fathomed)
+                Console.WriteLine($"  Fathomed: {node.FathomReason}");
+            Console.WriteLine();
+        }
+
+        if (result.Status == SimplexStatus.Optimal && result.BestNode is not null)
+        {
+            Console.WriteLine($"Best candidate: Node {result.BestNode.Id}");
+            for (int j = 0; j < result.Solution.Length; j++)
+            {
+                string name = j < _model!.VariableNames.Length ? _model.VariableNames[j] : $"x{j + 1}";
+                Console.WriteLine($"  {name} = {Rounding.R(result.Solution[j])}");
+            }
+            Console.WriteLine($"  z = {Rounding.R(result.ObjectiveValue)}");
+        }
+
+        Console.Write("Output file path (blank to skip): ");
+        string? outPath = Console.ReadLine();
+        if (!string.IsNullOrWhiteSpace(outPath))
+        {
+            WriteBranchAndBoundToFile(outPath, result);
+            Console.WriteLine($"Written to {outPath}");
+        }
+    }
+    catch (IOException ex)
+    {
+        Console.WriteLine($"Could not write output file: {ex.Message}");
+    }
+    catch (ArgumentException ex)
+    {
+        Console.WriteLine($"Model could not be solved: {ex.Message}");
+    }
+    catch (InvalidOperationException ex)
+    {
+        Console.WriteLine($"Model could not be solved: {ex.Message}");
+    }
+}
+private static void WriteBranchAndBoundToFile(string path, BranchAndBoundSimplex.Result result)
+{
+    using var writer = new StreamWriter(path);
+    writer.WriteLine($"Branch & Bound Simplex - status: {result.Status}");
+    if (!string.IsNullOrEmpty(result.Message))
+        writer.WriteLine(result.Message);
+    writer.WriteLine();
+
+    foreach (var node in result.AllNodes)
+    {
+        string description = result.BranchDescriptions.TryGetValue(node.Id, out var d) ? d : "";
+        writer.WriteLine($"Node {node.Id} (parent {node.ParentId}) - {description}");
+        writer.WriteLine($"  Bound = {Rounding.R(node.Bound)}");
+        if (node.Fathomed)
+            writer.WriteLine($"  Fathomed: {node.FathomReason}");
+        writer.WriteLine();
+    }
+
+    if (result.Status == SimplexStatus.Optimal && result.BestNode is not null)
+    {
+        writer.WriteLine($"Best candidate: Node {result.BestNode.Id}");
+        for (int j = 0; j < result.Solution.Length; j++)
+        {
+            string name = j < _model!.VariableNames.Length ? _model.VariableNames[j] : $"x{j + 1}";
+            writer.WriteLine($"  {name} = {Rounding.R(result.Solution[j])}");
+        }
+        writer.WriteLine($"  z = {Rounding.R(result.ObjectiveValue)}");
+    }
+}
 
     private static void RunSensitivityMenu()
     {
