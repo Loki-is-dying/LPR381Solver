@@ -3,24 +3,7 @@ using Solve.Utils;
 
 namespace Solve.Algorithms;
 
-/// <summary>
-/// Revised Primal Simplex Algorithm using the Product Form of the Inverse (eta vectors).
-/// Member 2 responsibility.
-///
-/// Reuses <see cref="CanonicalFormBuilder"/> for setup, exactly like <see cref="PrimalSimplex"/>
-/// does -- so it supports the same general Big-M model (any mix of "&lt;=", "&gt;=", "=" and
-/// "urs" variables), not just an all-"&lt;=" LP. The starting basis handed back by
-/// CanonicalFormBuilder is always the identity (each slack/surplus/artificial column it adds
-/// is a unit vector in its own constraint row), so B = I is a valid Revised Simplex starting
-/// point regardless of constraint type.
-///
-/// Each iteration's B^-1, Cbv, Cbv.B^-1 and Price Out (Cj* = Cbv.B^-1.Aj - Cj) values are used
-/// to reconstruct the equivalent full tableau (B^-1 * A for every column, plus a trailing "z"
-/// row holding the Price Out values and the current objective) so the result renders through
-/// the exact same <see cref="Tableau"/> / <see cref="IterationRecord"/> shape the rest of the
-/// group's code (console output, output file writer, sensitivity analysis) already expects
-/// from <see cref="PrimalSimplex"/>.
-/// </summary>
+
 public static class RevisedPrimalSimplex
 {
     private const double Epsilon = 1e-9;
@@ -44,10 +27,7 @@ public static class RevisedPrimalSimplex
             b[i] = reference.Data[i, rhsCol];
         }
 
-        // Raw cost vector per column -- NOT the Big-M-reduced objective row CanonicalFormBuilder
-        // leaves in reference.Data (that row is already netted against the initial basis, which
-        // is exactly the "reduced cost" a full tableau method needs but the Price Out formula
-        // recomputes for itself here). Same sign convention as CanonicalFormBuilder: internally
+       
         // always maximise; a "min" model runs as "max of the negated objective".
         var c = new double[totalCols];
         double sense = model.IsMaximisation ? 1d : -1d;
@@ -235,14 +215,7 @@ public static class RevisedPrimalSimplex
         return row == -1 ? 0d : xB[row];
     }
 
-    /// <summary>
-    /// Reconstructs the current iteration as a full tableau: row i (for each basic variable)
-    /// holds B^-1 * A_j for every column j, plus the current xB value in the RHS column; the
-    /// trailing "z" row holds the Price Out value for every non-basic column (0 for basic ones)
-    /// plus the current objective value in the RHS column -- the same shape PrimalSimplex's
-    /// tableaux already have, so ResultReporter/output writer/sensitivity analysis don't need
-    /// a special case for Revised Simplex.
-    /// </summary>
+   
     private static Tableau BuildTableauSnapshot(Tableau reference, int[] basis, double[,] binv, double[] xB,
         double[] cbv, Dictionary<int, double> priceOut, int m, int totalCols)
     {
