@@ -17,17 +17,7 @@ namespace Solve.Algorithms;
 ///      the current best integer solution, or is itself integer-feasible.
 ///   5. Backtracking to the next open node once a branch is exhausted.
 ///
-/// ALL possible sub-problems are created and explored -- the search does not stop at the
-/// first integer solution found; it only stops once every open node has been fathomed.
-///
-/// <see cref="BranchNode"/> (the shared Models type) only carries Id/ParentId/SubProblem/
-/// OptimalTableau/Bound/Fathomed/FathomReason, so this class keeps two small lookups on the
-/// side for the extra bookkeeping a search needs: each node's full LP-relaxation solution
-/// (needed to pick the next branching variable) and a human-readable description of which
-/// branch each node represents (needed for the console/output-file "Node N -- x2 &lt;= 3"
-/// style trail) -- neither of which changes what gets written into the shared BranchNode
-/// objects that the rest of the group's code (output writer, sensitivity analysis) reads.
-/// </summary>
+
 public static class BranchAndBoundSimplex
 {
     public class Result
@@ -153,7 +143,7 @@ public static class BranchAndBoundSimplex
                 continue;
             }
 
-            // Branch on the fractional variable -- create the floor and ceil sub-problems.
+          
             double fractionalValue = simplexResult.Solution[fractionalVarIndex];
             double floorBound = Math.Floor(fractionalValue);
             double ceilBound = Math.Ceiling(fractionalValue);
