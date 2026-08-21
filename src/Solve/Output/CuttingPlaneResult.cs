@@ -16,6 +16,7 @@ public class CuttingPlanResult
     public double ObjectiveValue { get; set; }
     public double[] Solution { get; set; } = Array.Empty<double>();
     public List<string> Cuts { get; set; } = new();
+    public List<string> IterationLogs { get; set; } = new();
 
     public override string ToString()
     {
