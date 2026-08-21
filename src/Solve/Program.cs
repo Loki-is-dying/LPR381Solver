@@ -2,6 +2,7 @@ using Solve.Algorithms;
 using Solve.Models;
 using Solve.Output;
 using Solve.Parsing;
+using Solve.Utils;
 using System.Linq.Expressions;
 
 namespace Solve;
