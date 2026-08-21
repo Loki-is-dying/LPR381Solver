@@ -2,6 +2,7 @@ using Solve.Algorithms;
 using Solve.Models;
 using Solve.Output;
 using Solve.Parsing;
+using System.Linq.Expressions;
 
 namespace Solve;
 
@@ -97,8 +98,8 @@ class Program
         Console.WriteLine("1. Primal Simplex");
         Console.WriteLine("2. Revised Primal Simplex   (not yet implemented - Member 2)");
         Console.WriteLine("3. Branch & Bound Simplex   (not yet implemented - Member 2)");
-        Console.WriteLine("4. Cutting Plane            (not yet implemented - Member 3)");
-        Console.WriteLine("5. Branch & Bound Knapsack  (not yet implemented - Member 3)");
+        Console.WriteLine("4. Cutting Plane ");
+        Console.WriteLine("5. Branch & Bound Knapsack");
         Console.WriteLine("6. Back");
         Console.Write("> ");
         string? choice = Console.ReadLine();
@@ -108,11 +109,8 @@ class Program
             case "1": RunPrimalSimplex(); break;
             case "2": RunRevisedSimplex(); break;
             case "3": RunBranchAndBound(); break;
-            case "3":
-            case "4":
-            case "5":
-                Console.WriteLine("Not yet implemented in this build.");
-                break;
+            case "4": RunCuttingPlane(); break;
+            case "5": RunBranchAndBoundKnapsack(); break;
             case "6": break;
             default: Console.WriteLine("Please choose 1-6."); break;
         }
@@ -261,6 +259,75 @@ private static void WriteBranchAndBoundToFile(string path, BranchAndBoundSimplex
         }
         writer.WriteLine($"  z = {Rounding.R(result.ObjectiveValue)}");
     }
+}
+
+    private static void RunCuttingPlane()
+    {
+        try
+        {
+            var result = CuttingPlane.Solve(_model!);
+            Console.WriteLine();
+            Console.WriteLine(result.ToString());
+
+            Console.WriteLine();
+
+            Console.Write("Output file path");
+            string? outPath = Console.ReadLine();
+
+            if (!string.IsNullOrWhiteSpace(outPath))
+            {
+                File.WriteAllText(outPath, result.ToString());
+                Console.WriteLine($"Written to {outPath}");
+            }
+
+        }
+        catch (ArgumentException ex)
+        {
+            Console.WriteLine($"Model could not be solved :{ex.Message}");
+        }
+        catch (InvalidOperationException ex)
+        {
+            Console.WriteLine($"Model could not be solved: {ex.Message}");
+        }
+        catch (IOException ex)
+        {
+            Console.WriteLine($"Could not write output file: {ex.Message}");
+        }
+    }
+    private static void RunBranchAndBoundKnapsack()
+    {
+        try
+        {
+            var result = BranchAndBoundKnapsack.Solve(_model!);
+
+            Console.WriteLine();
+            Console.WriteLine(result.ToString());
+
+            Console.WriteLine();
+            Console.WriteLine("Output file path");
+            string? outPath = Console.ReadLine();
+
+            
+
+        }
+        catch (IOException ex)
+        {
+
+            Console.WriteLine($"Could not write output file : {ex.Message}");
+
+
+
+        }
+        catch (ArgumentException ex)
+        {
+            Console.WriteLine($"model could not be solved : {ex.Message}");
+
+        }
+        catch (InvalidOperationException ex)
+        {
+            Console.WriteLine($"model could not be solved : {ex.Message}");
+        }
+
 }
 
     private static void RunSensitivityMenu()
