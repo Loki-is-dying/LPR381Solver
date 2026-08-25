@@ -13,6 +13,7 @@ public static class RhsRanging
     /// move while the current basis stays feasible, using β' = β + Δ·B⁻¹[:,i].</summary>
     public static SensitivityRange RangeRhs(SensitivityContext ctx, int constraintIndex)
     {
+        ValidateConstraintIndex(ctx, constraintIndex);
         int rhsCol = ctx.Final.NumCols - 1;
         double loDelta = double.NegativeInfinity;
         double hiDelta = double.PositiveInfinity;
@@ -42,6 +43,7 @@ public static class RhsRanging
     /// with a dual-simplex pass if a basic value went negative.</summary>
     public static SensitivityOutcome ApplyRhsChange(SensitivityContext ctx, int constraintIndex, double delta)
     {
+        ValidateConstraintIndex(ctx, constraintIndex);
         var clone = ctx.Final.Clone();
         int rhsCol = clone.NumCols - 1;
         int objRow = clone.NumRows - 1;
@@ -87,5 +89,11 @@ public static class RhsRanging
             ObjectiveValue = objective,
             FinalTableau = clone,
         };
+    }
+
+    private static void ValidateConstraintIndex(SensitivityContext ctx, int constraintIndex)
+    {
+        if (constraintIndex < 0 || constraintIndex >= ctx.M)
+            throw new ArgumentOutOfRangeException(nameof(constraintIndex), "Constraint index is out of range.");
     }
 }

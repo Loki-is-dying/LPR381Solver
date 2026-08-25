@@ -1,3 +1,4 @@
+using Solve.Algorithms;
 using Solve.Models;
 
 namespace Solve.SensitivityAnalysis;
@@ -71,7 +72,8 @@ public static class StructuralChanges
             BasisChanged = basisChanged,
             Message = message,
             Status = status,
-            Solution = solution,
+            Solution = solution.Append(newActivityValue).ToArray(),
+            SolutionLabels = ctx.Model.VariableNames.Append(name).ToArray(),
             ObjectiveValue = objective,
             FinalTableau = extended,
         };
@@ -80,12 +82,33 @@ public static class StructuralChanges
     /// <summary>Op 10 — add a new constraint row to the optimal tableau: expresses it purely in
     /// terms of currently non-basic variables by eliminating every currently-basic column, adds
     /// a slack for it, and restores feasibility with dual simplex if the resulting RHS is
-    /// negative. ">=" is converted to "&lt;=" by negation first. "=" is added as a "&lt;=" row
-    /// (a documented simplification — exact post-hoc equality re-optimisation is out of scope).</summary>
+    /// negative. ">=" is converted to "&lt;=" by negation first. An "=" constraint is instead
+    /// added to an extended model and solved with the canonical Big-M simplex.</summary>
     public static SensitivityOutcome AddConstraint(SensitivityContext ctx, double[] originalCoefficients, string relation, double rhs)
     {
         if (originalCoefficients.Length != ctx.Model.NumVars)
             throw new ArgumentException($"Expected {ctx.Model.NumVars} coefficient(s), got {originalCoefficients.Length}.");
+        if (relation is not "<=" and not ">=" and not "=")
+            throw new ArgumentException("Relation must be <=, >=, or =.");
+
+        if (relation == "=")
+        {
+            var extendedModel = ctx.Model.WithExtraConstraint(originalCoefficients, relation, rhs);
+            var result = PrimalSimplex.Solve(extendedModel);
+            string equalityMessage = result.Status == SimplexStatus.Optimal
+                ? "The equality constraint was added and the extended model was re-solved."
+                : $"The equality constraint was added, but the extended model is {result.Status.ToString().ToLowerInvariant()}.";
+            return new SensitivityOutcome
+            {
+                BasisChanged = true,
+                Message = equalityMessage,
+                Status = result.Status,
+                Solution = result.Solution,
+                SolutionLabels = (string[])extendedModel.VariableNames.Clone(),
+                ObjectiveValue = result.ObjectiveValue,
+                FinalTableau = result.FinalTableau,
+            };
+        }
 
         var old = ctx.Final;
         int oldRhsCol = old.NumCols - 1;
@@ -189,6 +212,7 @@ public static class StructuralChanges
             Message = message,
             Status = status,
             Solution = solution,
+            SolutionLabels = (string[])ctx.Model.VariableNames.Clone(),
             ObjectiveValue = objective,
             FinalTableau = extended,
         };

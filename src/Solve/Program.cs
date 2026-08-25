@@ -2,6 +2,7 @@ using Solve.Algorithms;
 using Solve.Models;
 using Solve.Output;
 using Solve.Parsing;
+using Solve.SensitivityAnalysis;
 using Solve.Utils;
 using System.Linq.Expressions;
 
@@ -14,6 +15,7 @@ class Program
 {
     private static LPModel? _model;
     private static string? _inputFilePath;
+    private static SimplexResult? _lastSimplexResult;
 
     static void Main(string[] args)
     {
@@ -74,6 +76,7 @@ class Program
         {
             _model = InputFileParser.Parse(path);
             _inputFilePath = path;
+            _lastSimplexResult = null;
             Console.WriteLine($"Loaded: {_model.NumVars} variable(s), {_model.NumConstraints} constraint(s), " +
                                $"{(_model.IsMaximisation ? "maximise" : "minimise")}.");
         }
@@ -122,6 +125,7 @@ class Program
         try
         {
             var result = PrimalSimplex.Solve(_model!);
+            _lastSimplexResult = result;
 
             Console.WriteLine();
             ResultReporter.WriteSimplexResult(Console.Out, "Primal Simplex", _model!, result);
@@ -152,6 +156,7 @@ class Program
     try
     {
         var result = RevisedPrimalSimplex.Solve(_model!);
+        _lastSimplexResult = result;
 
         Console.WriteLine();
         ResultReporter.WriteSimplexResult(Console.Out, "Revised Primal Simplex", _model!, result);
@@ -335,7 +340,13 @@ private static void WriteBranchAndBoundToFile(string path, BranchAndBoundSimplex
     {
         if (_model is null)
         {
-            Console.WriteLine("Load and solve a model first.");
+            Console.WriteLine("Load a model first.");
+            return;
+        }
+
+        if (_lastSimplexResult is null || _lastSimplexResult.Status != SimplexStatus.Optimal)
+        {
+            Console.WriteLine("Solve the model with Primal Simplex or Revised Primal Simplex first.");
             return;
         }
 
@@ -363,8 +374,165 @@ private static void WriteBranchAndBoundToFile(string path, BranchAndBoundSimplex
         string? choice = Console.ReadLine();
 
         if (int.TryParse(choice, out int index) && index >= 1 && index <= operations.Length)
-            Console.WriteLine("Not yet implemented in this build - Member 4 (Sensitivity Analysis).");
+        {
+            try
+            {
+                var context = SensitivityContext.From(_model, _lastSimplexResult);
+                RunSensitivityOperation(index, context);
+            }
+            catch (ArgumentException ex)
+            {
+                Console.WriteLine($"Invalid sensitivity input: {ex.Message}");
+            }
+            catch (InvalidOperationException ex)
+            {
+                Console.WriteLine($"Sensitivity analysis failed: {ex.Message}");
+            }
+        }
         else if (choice?.Trim() != (operations.Length + 1).ToString())
             Console.WriteLine("Please choose a valid option.");
+    }
+
+    private static void RunSensitivityOperation(int index, SensitivityContext context)
+    {
+        switch (index)
+        {
+            case 1:
+                PrintRange(ObjectiveRanging.RangeNonBasic(context, SelectColumn(context, false)));
+                break;
+            case 2:
+                PrintOutcome(ObjectiveRanging.ApplyNonBasicChange(context, SelectColumn(context, false), ReadDouble("Objective coefficient change Δ: ")));
+                break;
+            case 3:
+                PrintRange(ObjectiveRanging.RangeBasic(context, SelectColumn(context, true)));
+                break;
+            case 4:
+                PrintOutcome(ObjectiveRanging.ApplyBasicChange(context, SelectColumn(context, true), ReadDouble("Objective coefficient change Δ: ")));
+                break;
+            case 5:
+                PrintRange(RhsRanging.RangeRhs(context, ReadConstraintIndex(context)));
+                break;
+            case 6:
+                PrintOutcome(RhsRanging.ApplyRhsChange(context, ReadConstraintIndex(context), ReadDouble("RHS change Δ: ")));
+                break;
+            case 7:
+                PrintRange(ColumnRanging.RangeNonBasicColumn(context, SelectColumn(context, false), ReadConstraintIndex(context)));
+                break;
+            case 8:
+                PrintOutcome(ColumnRanging.ApplyNonBasicColumnChange(context, SelectColumn(context, false), ReadConstraintIndex(context), ReadDouble("Column coefficient change Δ: ")));
+                break;
+            case 9:
+                PrintOutcome(StructuralChanges.AddActivity(context, ReadText("New activity name: "),
+                    ReadDouble("Objective coefficient: "), ReadCoefficients(context.M, "Constraint coefficient")));
+                break;
+            case 10:
+                PrintOutcome(StructuralChanges.AddConstraint(context, ReadCoefficients(context.Model.NumVars, "Variable coefficient"),
+                    ReadRelation(), ReadDouble("RHS: ")));
+                break;
+            case 11:
+                var shadow = ShadowPrices.Compute(context);
+                Console.WriteLine("Shadow prices:");
+                for (int i = 0; i < shadow.ConstraintLabels.Length; i++)
+                    Console.WriteLine($"  {shadow.ConstraintLabels[i]} = {Rounding.R(shadow.ShadowPrices[i])}");
+                break;
+            case 12:
+                PrintDuality(Duality.Analyze(context.Model, context.Result));
+                break;
+        }
+    }
+
+    private static string SelectColumn(SensitivityContext context, bool basic)
+    {
+        var columns = Enumerable.Range(0, context.Final.NumCols - 1)
+            .Where(column => context.IsBasic(column) == basic && !context.ArtificialColumns.Contains(column))
+            .Select(column => context.Final.ColumnLabels[column])
+            .ToArray();
+        if (columns.Length == 0)
+            throw new ArgumentException(basic ? "There are no basic decision/slack columns available." : "There are no non-basic columns available.");
+
+        Console.WriteLine(basic ? "Basic columns:" : "Non-basic columns:");
+        for (int i = 0; i < columns.Length; i++)
+            Console.WriteLine($"{i + 1}. {columns[i]}");
+        int selected = ReadInt("Select a column: ") - 1;
+        if (selected < 0 || selected >= columns.Length)
+            throw new ArgumentException("Column selection is out of range.");
+        return columns[selected];
+    }
+
+    private static int ReadConstraintIndex(SensitivityContext context)
+    {
+        int selected = ReadInt($"Constraint (1-{context.M}): ") - 1;
+        if (selected < 0 || selected >= context.M)
+            throw new ArgumentException("Constraint selection is out of range.");
+        return selected;
+    }
+
+    private static double[] ReadCoefficients(int count, string label)
+    {
+        var values = new double[count];
+        for (int i = 0; i < count; i++)
+            values[i] = ReadDouble($"{label} {i + 1}: ");
+        return values;
+    }
+
+    private static string ReadRelation()
+    {
+        string relation = ReadText("Relation (<=, >=, =): ");
+        if (relation is not "<=" and not ">=" and not "=")
+            throw new ArgumentException("Relation must be <=, >=, or =.");
+        return relation;
+    }
+
+    private static string ReadText(string prompt)
+    {
+        Console.Write(prompt);
+        string? value = Console.ReadLine()?.Trim();
+        if (string.IsNullOrWhiteSpace(value))
+            throw new ArgumentException("A value is required.");
+        return value;
+    }
+
+    private static int ReadInt(string prompt)
+    {
+        if (int.TryParse(ReadText(prompt), out int value))
+            return value;
+        throw new ArgumentException("Expected a whole number.");
+    }
+
+    private static double ReadDouble(string prompt)
+    {
+        if (double.TryParse(ReadText(prompt), out double value) && !double.IsNaN(value))
+            return value;
+        throw new ArgumentException("Expected a number.");
+    }
+
+    private static void PrintRange(SensitivityRange range)
+    {
+        Console.WriteLine($"{range.Label}: current={Rounding.R(range.CurrentValue)}, " +
+                          $"allowable range=[{Rounding.R(range.Lower)}, {Rounding.R(range.Upper)}]");
+    }
+
+    private static void PrintOutcome(SensitivityOutcome outcome)
+    {
+        Console.WriteLine(outcome.Message);
+        Console.WriteLine($"Status: {outcome.Status}; objective={Rounding.R(outcome.ObjectiveValue)}");
+        for (int i = 0; i < outcome.Solution.Length; i++)
+        {
+            string name = i < outcome.SolutionLabels.Length
+                ? outcome.SolutionLabels[i]
+                : i < _model!.VariableNames.Length ? _model.VariableNames[i] : $"x{i + 1}";
+            Console.WriteLine($"  {name} = {Rounding.R(outcome.Solution[i])}");
+        }
+    }
+
+    private static void PrintDuality(DualityReport report)
+    {
+        Console.WriteLine($"Primal feasible: {report.PrimalFeasible}; dual feasible: {report.DualFeasible}");
+        Console.WriteLine($"Primal objective: {Rounding.R(report.PrimalObjective)}");
+        Console.WriteLine($"Dual status: {report.DualResult.Status}");
+        Console.WriteLine($"Dual objective: {Rounding.R(report.DualObjective)}");
+        Console.WriteLine($"Gap: {Rounding.R(report.Gap)}");
+        Console.WriteLine(report.WeakDuality ? "Weak duality verified." : "Weak duality was not verified.");
+        Console.WriteLine(report.StrongDuality ? "Strong duality verified." : "Strong duality was not verified; weak duality may still hold.");
     }
 }
