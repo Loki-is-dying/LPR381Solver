@@ -1,0 +1,38 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v6.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v6.0": {
+      "Solve.SensitivityTests/1.0.0": {
+        "dependencies": {
+          "solve": "1.0.0"
+        },
+        "runtime": {
+          "Solve.SensitivityTests.dll": {}
+        }
+      },
+      "solve/1.0.0": {
+        "runtime": {
+          "solve.dll": {
+            "fileVersion": "0.0.0.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "Solve.SensitivityTests/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "solve/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}
