@@ -26,7 +26,7 @@ dotnet run --project src/Solve
   entry) automatically.
 - `Output/ResultReporter.cs` — one formatter, called for both console and file output,
   so the two always match. All values rounded to 3 decimals.
-- `Program.cs` — main menu, algorithm submenu, sensitivity submenu (stubbed — see below).
+- `Program.cs` — main menu, algorithm submenu, and interactive sensitivity-analysis submenu.
 
 Verified against the group's own reference case, `samples/santas_workshop.txt`
 (full derivation in `docs/Santas_Workshop_Reference.md`): our Primal Simplex reaches
@@ -65,11 +65,16 @@ building the UI around it.
   iteration cap.
 - Sensitivity Analysis — all 12 operations from the brief (NBV/BV ranges and changes,
   RHS ranges and changes, NBV column ranges and changes, add activity, add constraint,
-  shadow prices) plus duality (apply, solve dual, verify strong/weak).
+  shadow prices) plus duality (apply, solve dual, verify strong/weak). The menu requires
+  an optimal Primal or Revised Simplex result first. Added equality constraints are
+  solved as real equalities through an extended model.
 
-The algorithm submenu and SA submenu in `Program.cs` already have numbered stubs
-for every one of these — wire your implementation in where it says "not yet
-implemented".
+The dependency-free sensitivity regression runner is in
+`src/Solve.SensitivityTests/`. Run it with:
+
+```
+dotnet run --project src/Solve.SensitivityTests -- samples/santas_workshop.txt
+```
 
 ## Input file format
 
@@ -97,6 +102,15 @@ src/Solve/
 ├── Parsing/                InputFileParser, InputFormatException
 ├── Algorithms/             CanonicalFormBuilder, PrimalSimplex  (+ your algorithm files)
 ├── Output/                 ResultReporter
-├── SensitivityAnalysis/    (empty — not yet built)
+├── SensitivityAnalysis/    sensitivity ranging, structural changes, shadow prices, and duality
+├── Solve.SensitivityTests/ focused sensitivity regression checks
 └── Utils/                  Rounding
 ```
+
+
+
+### Members
+- Luqmaan Slarmie - Project Manager and Architecture design
+- Ofentse Mathosa - Revised Simplex and B&B Simplex
+- Rubina Moyakhe - Knapsack and Cutting Plane
+- Stephen van de Merwe - Sensitivity Analysis
