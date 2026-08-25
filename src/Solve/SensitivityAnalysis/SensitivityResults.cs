@@ -16,6 +16,7 @@ public class SensitivityOutcome
     public string Message { get; set; } = "";
     public SimplexStatus Status { get; set; }
     public double[] Solution { get; set; } = System.Array.Empty<double>();
+    public string[] SolutionLabels { get; set; } = System.Array.Empty<string>();
     public double ObjectiveValue { get; set; }
     public Tableau FinalTableau { get; set; } = null!;
 }
@@ -27,6 +28,9 @@ public class DualityReport
     public double PrimalObjective { get; set; }
     public double DualObjective { get; set; }
     public double Gap { get; set; }
+    public bool PrimalFeasible { get; set; }
+    public bool DualFeasible { get; set; }
+    public bool WeakDuality { get; set; }
     public bool StrongDuality { get; set; }
 }
 

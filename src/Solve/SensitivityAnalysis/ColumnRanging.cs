@@ -15,6 +15,7 @@ public static class ColumnRanging
     /// (0-based), before that column's reduced cost goes negative: d'_j = d_j + Δ·yᵢ.</summary>
     public static SensitivityRange RangeNonBasicColumn(SensitivityContext ctx, string label, int constraintIndex)
     {
+        ValidateConstraintIndex(ctx, constraintIndex);
         int col = ctx.ColumnIndex(label);
         if (ctx.IsBasic(col))
             throw new ArgumentException($"\"{label}\" is currently basic — column ranging applies to non-basic variables only.");
@@ -44,6 +45,7 @@ public static class ColumnRanging
     /// Δ·B⁻¹[:,i] and re-optimises if the reduced cost goes negative.</summary>
     public static SensitivityOutcome ApplyNonBasicColumnChange(SensitivityContext ctx, string label, int constraintIndex, double delta)
     {
+        ValidateConstraintIndex(ctx, constraintIndex);
         int col = ctx.ColumnIndex(label);
         if (ctx.IsBasic(col))
             throw new ArgumentException($"\"{label}\" is currently basic — column ranging applies to non-basic variables only.");
@@ -74,5 +76,11 @@ public static class ColumnRanging
             ObjectiveValue = objective,
             FinalTableau = clone,
         };
+    }
+
+    private static void ValidateConstraintIndex(SensitivityContext ctx, int constraintIndex)
+    {
+        if (constraintIndex < 0 || constraintIndex >= ctx.M)
+            throw new ArgumentOutOfRangeException(nameof(constraintIndex), "Constraint index is out of range.");
     }
 }

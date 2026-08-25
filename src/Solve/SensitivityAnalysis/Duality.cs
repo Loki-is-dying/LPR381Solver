@@ -9,6 +9,8 @@ namespace Solve.SensitivityAnalysis;
 /// (max / all "&lt;=" / all "+" → min / all "&gt;=" / all y&gt;=0, see docs/Santas_Workshop_Reference.md).</summary>
 public static class Duality
 {
+    private const double Epsilon = 1e-6;
+
     public static LPModel BuildDualModel(LPModel primal, out bool[] negatedForSign)
     {
         int m = primal.NumConstraints, n = primal.NumVars;
@@ -88,6 +90,8 @@ public static class Duality
     {
         var dualModel = BuildDualModel(primal, out var negated);
         var dualResult = PrimalSimplex.Solve(dualModel);
+        bool primalFeasible = IsFeasible(primal, primalResult.Solution);
+        bool dualFeasible = dualResult.Status == SimplexStatus.Optimal && IsFeasible(dualModel, dualResult.Solution);
 
         if (dualResult.Status == SimplexStatus.Optimal)
         {
@@ -98,6 +102,8 @@ public static class Duality
         double primalObjective = primalResult.ObjectiveValue;
         double dualObjective = dualResult.Status == SimplexStatus.Optimal ? dualResult.ObjectiveValue : double.NaN;
         double gap = double.IsNaN(dualObjective) ? double.NaN : Math.Abs(primalObjective - dualObjective);
+        bool weakDuality = primalFeasible && dualFeasible &&
+            (primal.IsMaximisation ? primalObjective <= dualObjective + Epsilon : primalObjective >= dualObjective - Epsilon);
 
         return new DualityReport
         {
@@ -106,7 +112,43 @@ public static class Duality
             PrimalObjective = primalObjective,
             DualObjective = dualObjective,
             Gap = gap,
-            StrongDuality = !double.IsNaN(gap) && gap < 1e-6,
+            PrimalFeasible = primalFeasible,
+            DualFeasible = dualFeasible,
+            WeakDuality = weakDuality,
+            StrongDuality = weakDuality && gap < Epsilon,
         };
+    }
+
+    private static bool IsFeasible(LPModel model, double[] solution)
+    {
+        if (solution.Length != model.NumVars)
+            return false;
+
+        for (int j = 0; j < model.NumVars; j++)
+        {
+            double value = solution[j];
+            string sign = model.SignRestrictions[j];
+            if (sign is "+" or "int" or "bin" && value < -Epsilon)
+                return false;
+            if (sign == "-" && value > Epsilon)
+                return false;
+            if (sign == "bin" && value > 1 + Epsilon)
+                return false;
+        }
+
+        for (int i = 0; i < model.NumConstraints; i++)
+        {
+            double lhs = 0;
+            for (int j = 0; j < model.NumVars; j++)
+                lhs += model.ConstraintMatrix[i, j] * solution[j];
+            double difference = lhs - model.RHS[i];
+            if (model.ConstraintRelations[i] == "<=" && difference > Epsilon)
+                return false;
+            if (model.ConstraintRelations[i] == ">=" && difference < -Epsilon)
+                return false;
+            if (model.ConstraintRelations[i] == "=" && Math.Abs(difference) > Epsilon)
+                return false;
+        }
+        return true;
     }
 }
