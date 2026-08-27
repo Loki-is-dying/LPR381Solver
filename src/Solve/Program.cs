@@ -100,8 +100,8 @@ class Program
 
         Console.WriteLine();
         Console.WriteLine("1. Primal Simplex");
-        Console.WriteLine("2. Revised Primal Simplex   (not yet implemented - Member 2)");
-        Console.WriteLine("3. Branch & Bound Simplex   (not yet implemented - Member 2)");
+        Console.WriteLine("2. Revised Primal Simplex");
+        Console.WriteLine("3. Branch & Bound Simplex");
         Console.WriteLine("4. Cutting Plane ");
         Console.WriteLine("5. Branch & Bound Knapsack");
         Console.WriteLine("6. Back");
